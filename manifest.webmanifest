@@ -1,0 +1,18 @@
+{
+  "name": "Peak District Trials Group Dates",
+  "short_name": "Peak Trials",
+  "description": "Plan and publish Peak District Trials Group dates.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#3333cc",
+  "icons": [
+    {
+      "src": "peak-district-trials-group-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
