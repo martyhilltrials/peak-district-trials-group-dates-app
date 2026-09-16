@@ -1,9 +1,7 @@
 'use strict';
 
 module.exports = function handler(request, response) {
-  var url = process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.SUPABASE_URL;
-
+  var url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   var key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
@@ -19,5 +17,5 @@ module.exports = function handler(request, response) {
     return;
   }
 
-  response.status(200).json({ url: url, key: key });
+  response.status(200).json({url: url, key: key});
 };
