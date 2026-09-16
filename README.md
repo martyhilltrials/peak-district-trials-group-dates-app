@@ -32,6 +32,18 @@ That address is automatically approved as the administrator.
 
 Club representatives can add and edit their own club's dates. Their dates remain pending until the administrator approves them. Visitors can only see approved dates.
 
+## Live calendar subscription
+
+The **Subscribe to Calendar** button uses this permanent feed:
+
+`https://peak-district-trials-group-dates-ap.vercel.app/api/calendar.ics`
+
+Only approved dates are included. Google Calendar, Apple Calendar and other compatible calendar apps periodically check the address for additions, changes and cancellations. The app updates the feed immediately, but each calendar provider controls its own refresh timing and may take several hours to display a change.
+
+The live feed requires both `api/calendar.js` and the rewrite in `vercel.json`. Keep the complete `api` folder when updating the GitHub repository.
+
+The PDF and Mobile HTML exports show a reminder that dates may change and that the live calendar subscription is the most up-to-date option.
+
 ## Security
 
 The browser receives only the Supabase public URL and publishable/anonymous key. The app never sends the database password, secret key or service-role key to the browser. Supabase Row Level Security controls every read and change.

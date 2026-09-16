@@ -24,7 +24,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
 .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;max-width:1400px;margin:18px auto;padding:0 18px}
 .toolbar label{font-weight:700}.toolbar input[type=number]{width:95px}.toolbar select{max-width:210px}.toolbar .push{margin-left:auto}
 input,select{background:white;color:var(--ink);border:1px solid #b7c5d2;border-radius:8px;padding:10px 11px;min-height:42px}
-.btn{border:1px solid #c9d5e0;border-radius:8px;background:white;color:var(--ink);padding:9px 13px;min-height:42px;font-weight:650}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #c9d5e0;border-radius:8px;background:white;color:var(--ink);padding:9px 13px;min-height:42px;font-weight:650;text-decoration:none}
 .btn:hover{background:#eaf1f7}.btn.primary{background:var(--acu-blue);color:white;border-color:var(--acu-blue)}.btn.primary:hover{background:#2929a3}
 .btn.dark{background:var(--navy);color:white;border-color:var(--navy)}.btn.danger{color:#a01e2a;border-color:#e2aab0}
 .status-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#eaf1f7;color:var(--muted);padding:7px 10px;font-size:12px;font-weight:750}
@@ -59,13 +59,15 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
 .file-actions{display:flex;flex-wrap:wrap;gap:8px}.clash-list{margin:0;padding-left:22px}.clash-list li{margin:9px 0}
 .event-status{display:inline-block;border-radius:999px;padding:2px 7px;margin-top:4px;background:#fff2df;color:#855014;font-size:11px;font-weight:800}.event-status.rejected{background:#fde9eb;color:#9b2633}
 .auth-box{border:1px solid var(--line);border-radius:10px;background:#f7f9fb;padding:14px}.auth-box strong,.auth-box small{display:block}.auth-box small{color:var(--muted);margin-top:4px}
+.subscription-url{display:grid;gap:6px;font-weight:650}.copy-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.copy-row input{width:100%;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+.subscription-help{margin-top:16px;border-left:4px solid var(--acu-blue);background:#eeeeff;padding:12px 14px;border-radius:5px;color:#35356f}.subscription-help h3{margin:0 0 4px;font-size:15px}.subscription-help h3:not(:first-child){margin-top:13px}.subscription-help p{margin:0;color:#4d4d7a;font-size:13px}
 .admin-list{display:grid;gap:8px}.admin-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(150px,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:9px}
 .admin-row .meta{min-width:0}.admin-row .meta strong,.admin-row .meta small{display:block;overflow-wrap:anywhere}.admin-row .meta small{color:var(--muted)}
 .admin-row select{width:100%}.connection-help{border-left:4px solid var(--acu-blue);background:#eeeeff;padding:10px 12px;border-radius:5px;color:#35356f}
 #toast{position:fixed;right:16px;bottom:16px;z-index:10;background:var(--navy);color:white;padding:12px 16px;border-radius:9px;display:none;max-width:330px}
 #printSheet{display:none}
 @media(max-width:850px){.layout{grid-template-columns:1fr}.side{display:none}.toolbar .push{margin-left:0}.admin-row{grid-template-columns:1fr}}
-@media(max-width:560px){.masthead{padding:14px 10px}.mast-inner{gap:8px}.brand-logo{width:58px;height:58px;padding:3px}.masthead h1{font-size:21px}.masthead p{display:none}.mast-year{font-size:31px;padding:5px 7px}
+@media(max-width:560px){.masthead{padding:14px 10px}.mast-inner{gap:8px}.brand-logo{width:58px;height:58px;padding:3px}.masthead h1{font-size:21px}.masthead p{display:none}.mast-year{font-size:31px;padding:5px 7px}.copy-row{grid-template-columns:1fr}
 .months{grid-template-columns:repeat(6,1fr)}.month-bar h2{font-size:21px}.blank,.day-cell{min-height:70px}.day-cell{padding:2px}.day-number{text-align:center}
 .chip{width:9px;height:9px;border:0;border-radius:50%;padding:0;margin:3px auto;font-size:0}.more{text-align:center;font-size:10px;padding:0}.weekdays span{font-size:11px}
 .fields{grid-template-columns:1fr}.fields .wide{grid-column:1}.setup-row{grid-template-columns:minmax(0,1fr) 45px 34px}.setup-row input[type=file]{grid-column:1/-1;width:100%;max-width:none}}
@@ -94,7 +96,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
  <button id="authButton" class="btn" type="button">Club sign in</button>
  <button id="pdfExport" class="btn" type="button">Export PDF</button>
  <button id="htmlExport" class="btn" type="button">Mobile HTML</button>
- <button id="icsExport" class="btn dark" type="button">Calendar (.ics)</button>
+ <button id="calendarSubscribe" class="btn dark" type="button">Subscribe to Calendar</button>
 </div>
 <div class="layout">
  <aside class="panel side"><h2>Series</h2><p class="hint">Select a series to filter the calendar.</p><div id="seriesList" class="series-list"></div></aside>
@@ -144,6 +146,21 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
   <div class="auth-box"><strong id="signedInEmail"></strong><small id="signedInAccess"></small></div>
   <div class="actions"><button id="closeAuth" class="btn" type="button">Close</button><button id="signOut" class="btn danger" type="button">Sign out</button></div>
  </div>
+</div></dialog>
+<dialog id="subscribeDialog"><div class="modal">
+ <h2>Subscribe to the live calendar</h2>
+ <p>Subscribe once and approved date additions, changes and cancellations will be picked up automatically by your calendar provider.</p>
+ <label class="subscription-url" for="subscriptionUrl">Calendar subscription address</label>
+ <div class="copy-row">
+  <input id="subscriptionUrl" type="url" readonly aria-label="Calendar subscription address">
+  <button id="copySubscriptionLink" class="btn" type="button">Copy link</button>
+ </div>
+ <div class="subscription-help">
+  <h3>Google Calendar</h3><p>Copy the link. On a computer, open Google Calendar and choose Other calendars → + → From URL, then paste it.</p>
+  <h3>Apple Calendar or iPhone</h3><p>Use “Subscribe on this device” below. If asked, confirm that you want to subscribe rather than import a single file.</p>
+  <h3>Update timing</h3><p>The feed changes as soon as an approved date is saved, but Google and Apple decide how often to check it. Updates may take several hours to appear.</p>
+ </div>
+ <div class="actions"><button id="closeSubscribe" class="btn" type="button">Close</button><a id="deviceSubscribe" class="btn dark" href="#">Subscribe on this device</a></div>
 </div></dialog>
 <dialog id="setupDialog"><div class="modal">
  <h2>Peak District calendar setup</h2><p>Change the dropdown names and colours, or add logos for the header and series.</p>

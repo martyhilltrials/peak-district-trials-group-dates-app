@@ -655,6 +655,30 @@
     link.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
   }
+  function subscriptionAddress() { return location.origin + '/api/calendar.ics'; }
+  $('calendarSubscribe').onclick = function () {
+    var address = subscriptionAddress();
+    $('subscriptionUrl').value = address;
+    $('deviceSubscribe').href = address.replace(/^https?:/i, 'webcal:');
+    $('subscribeDialog').showModal();
+  };
+  $('closeSubscribe').onclick = function () { $('subscribeDialog').close(); };
+  $('copySubscriptionLink').onclick = async function () {
+    var input = $('subscriptionUrl');
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(input.value);
+      else {
+        input.focus();
+        input.select();
+        document.execCommand('copy');
+      }
+      toast('Calendar subscription link copied');
+    } catch (error) {
+      input.focus();
+      input.select();
+      toast('Select and copy the calendar link');
+    }
+  };
   $('backupExport').onclick = function () { download('peak-district-trials-dates-backup-' + state.year + '.json', JSON.stringify(state, null, 2), 'application/json'); };
   $('backupImport').onchange = async function (event) {
     var file = event.target.files[0];
@@ -703,8 +727,12 @@
         }).join('') : '<div class="print-line">No dates entered</div>') + '</section>';
       }).join('') + '<p class="print-note">' + esc(NOTE) + '</p>';
   }
-  $('pdfExport').onclick = function () { printContent(); window.print(); };
+  function showExportNotice() {
+    alert('Dates are subject to change, Subscribe to calendar for the most up to date events');
+  }
+  $('pdfExport').onclick = function () { showExportNotice(); printContent(); window.print(); };
   $('htmlExport').onclick = function () {
+    showExportNotice();
     var logo = headerLogoValue();
     var sections = Array.from({length:12}, function (_, index) {
       var events = monthEntries(index, true, true);
@@ -719,30 +747,6 @@
       '<header><img src="' + logo + '" alt="Peak District Trials Group logo"><h1>' + state.year + ' Peak District Trials Group Dates</h1></header><nav aria-label="Months">' + months + '</nav><main>' + sections + '</main><footer>' + esc(NOTE) + '</footer></body></html>';
     download('peak-district-trials-dates-' + state.year + '-mobile.html', mobile, 'text/html;charset=utf-8');
   };
-  function icsText(value) { return String(value).replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); }
-  function fold(line) {
-    var output = '';
-    var width = 0;
-    var encoder = new TextEncoder();
-    for (var character of line) {
-      var bytes = encoder.encode(character).length;
-      if (width + bytes > 75) { output += '\r\n '; width = 1; }
-      output += character;
-      width += bytes;
-    }
-    return output;
-  }
-  $('icsExport').onclick = function () {
-    var stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-    var lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Peak District Trials Group Dates App//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:' + state.year + ' Peak District Trials Group Dates'];
-    sorted(yearEvents(true)).forEach(function (event) {
-      var series = seriesFor(event);
-      lines.push('BEGIN:VEVENT','UID:' + event.id + '@peak-district-trials.org','DTSTAMP:' + stamp,'DTSTART;VALUE=DATE:' + event.start.replace(/-/g, ''),'DTEND;VALUE=DATE:' + nextDay(event.end).replace(/-/g, ''),'SUMMARY:' + icsText(event.title + ' — ' + series.name),'DESCRIPTION:' + icsText('Club: ' + event.club + '\nSeries: ' + series.name + '\n' + NOTE),'TRANSP:TRANSPARENT','END:VEVENT');
-    });
-    lines.push('END:VCALENDAR');
-    download('peak-district-trials-dates-' + state.year + '.ics', lines.map(fold).join('\r\n') + '\r\n', 'text/calendar;charset=utf-8');
-  };
-
   render();
   preloadDefaultLogo();
   connectRemote();
