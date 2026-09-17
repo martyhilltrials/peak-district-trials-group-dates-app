@@ -22,6 +22,7 @@ create table if not exists public.profiles (
   club_id uuid references public.clubs(id) on delete set null,
   role text not null default 'club',
   approved boolean not null default false,
+  access_notification_sent_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_role_valid check (role in ('admin', 'club'))
@@ -53,7 +54,7 @@ create table if not exists public.events (
   series_id text not null references public.series(id) on update cascade,
   club_id uuid not null references public.clubs(id) on delete restrict,
   title text not null,
-  status text not null default 'pending',
+  status text not null default 'approved',
   created_by uuid references auth.users(id) on delete set null,
   updated_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -66,6 +67,16 @@ create table if not exists public.events (
 create index if not exists events_dates_index on public.events (start_date, end_date);
 create index if not exists events_club_index on public.events (club_id);
 create index if not exists events_status_index on public.events (status);
+
+alter table public.profiles
+  add column if not exists access_notification_sent_at timestamptz;
+
+alter table public.events
+  alter column status set default 'approved';
+
+update public.events
+set status = 'approved'
+where status = 'pending';
 
 insert into public.app_settings (id) values ('main')
 on conflict (id) do nothing;
@@ -137,6 +148,20 @@ begin
 end;
 $$;
 
+create or replace function public.publish_calendar_event()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.status = 'pending' then
+    new.status = 'approved';
+  end if;
+  return new;
+end;
+$$;
+
 create or replace function public.create_calendar_profile()
 returns trigger
 language plpgsql
@@ -145,19 +170,22 @@ set search_path = ''
 as $$
 declare
   is_first_admin boolean := lower(coalesce(new.email, '')) = 'martyhilltrials@gmail.com';
+  profile_name text := left(regexp_replace(trim(coalesce(new.raw_user_meta_data ->> 'display_name', '')), '[[:space:]]+', ' ', 'g'), 100);
 begin
   if new.email is null then
     return new;
   end if;
-  insert into public.profiles as existing (user_id, email, role, approved)
+  insert into public.profiles as existing (user_id, email, display_name, role, approved)
   values (
     new.id,
     lower(new.email),
+    profile_name,
     case when is_first_admin then 'admin' else 'club' end,
     is_first_admin
   )
   on conflict (user_id) do update
     set email = excluded.email,
+        display_name = case when profile_name <> '' then profile_name else existing.display_name end,
         role = case when is_first_admin then 'admin' else existing.role end,
         approved = case when is_first_admin then true else existing.approved end,
         updated_at = now();
@@ -167,8 +195,62 @@ $$;
 
 drop trigger if exists calendar_profile_from_auth_user on auth.users;
 create trigger calendar_profile_from_auth_user
-after insert or update of email on auth.users
+after insert or update of email, raw_user_meta_data on auth.users
 for each row execute function public.create_calendar_profile();
+
+create or replace function public.set_my_calendar_display_name(requested_name text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  cleaned_name text := left(regexp_replace(trim(coalesce(requested_name, '')), '[[:space:]]+', ' ', 'g'), 100);
+begin
+  if length(cleaned_name) < 2 then
+    raise exception 'Enter your full name.';
+  end if;
+
+  update public.profiles
+  set display_name = cleaned_name,
+      updated_at = now()
+  where user_id = auth.uid();
+
+  if not found then
+    raise exception 'No calendar profile was found.';
+  end if;
+
+  return cleaned_name;
+end;
+$$;
+
+create or replace function public.pending_calendar_access_notification()
+returns table(request_user_id uuid, request_email text, request_name text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.user_id, p.email, p.display_name
+  from public.profiles as p
+  where p.user_id = auth.uid()
+    and p.approved = false
+    and p.access_notification_sent_at is null
+  limit 1;
+$$;
+
+create or replace function public.mark_calendar_access_notification_sent()
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  update public.profiles
+  set access_notification_sent_at = now(),
+      updated_at = now()
+  where user_id = auth.uid()
+    and approved = false;
+$$;
 
 drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
@@ -190,16 +272,23 @@ create trigger events_set_updated_at
 before insert or update on public.events
 for each row execute function public.set_calendar_timestamps();
 
-insert into public.profiles as existing (user_id, email, role, approved)
+drop trigger if exists events_auto_publish on public.events;
+create trigger events_auto_publish
+before insert or update on public.events
+for each row execute function public.publish_calendar_event();
+
+insert into public.profiles as existing (user_id, email, display_name, role, approved)
 select
   id,
   lower(email),
+  left(regexp_replace(trim(coalesce(raw_user_meta_data ->> 'display_name', '')), '[[:space:]]+', ' ', 'g'), 100),
   case when lower(email) = 'martyhilltrials@gmail.com' then 'admin' else 'club' end,
   lower(email) = 'martyhilltrials@gmail.com'
 from auth.users
 where email is not null
 on conflict (user_id) do update
   set email = excluded.email,
+      display_name = case when excluded.display_name <> '' then excluded.display_name else existing.display_name end,
       role = case when excluded.email = 'martyhilltrials@gmail.com' then 'admin' else existing.role end,
       approved = case when excluded.email = 'martyhilltrials@gmail.com' then true else existing.approved end,
       updated_at = now();
@@ -212,11 +301,18 @@ alter table public.events enable row level security;
 
 revoke all on table public.clubs, public.profiles, public.series, public.app_settings, public.events from anon, authenticated;
 grant select on table public.clubs, public.series, public.app_settings to anon, authenticated;
-grant select on table public.events to anon, authenticated;
+grant select (id, start_date, end_date, series_id, club_id, title, status, created_at, updated_at)
+  on table public.events to anon, authenticated;
 grant select, update on table public.profiles to authenticated;
 grant insert, update, delete on table public.clubs, public.series, public.app_settings, public.events to authenticated;
 grant execute on function public.is_calendar_admin() to anon, authenticated;
 grant execute on function public.current_calendar_club_id() to anon, authenticated;
+revoke all on function public.set_my_calendar_display_name(text) from public;
+revoke all on function public.pending_calendar_access_notification() from public;
+revoke all on function public.mark_calendar_access_notification_sent() from public;
+grant execute on function public.set_my_calendar_display_name(text) to authenticated;
+grant execute on function public.pending_calendar_access_notification() to authenticated;
+grant execute on function public.mark_calendar_access_notification_sent() to authenticated;
 
 drop policy if exists clubs_public_read on public.clubs;
 create policy clubs_public_read on public.clubs
@@ -295,7 +391,7 @@ with check (
   public.is_calendar_admin()
   or (
     club_id = public.current_calendar_club_id()
-    and status = 'pending'
+    and status = 'approved'
     and created_by = auth.uid()
   )
 );
@@ -311,7 +407,7 @@ with check (
   public.is_calendar_admin()
   or (
     club_id = public.current_calendar_club_id()
-    and status = 'pending'
+    and status = 'approved'
   )
 );
 
@@ -337,4 +433,6 @@ commit;
 -- After running this file:
 -- 1. Sign in to the app once with martyhilltrials@gmail.com.
 -- 2. Your account becomes the approved administrator automatically.
--- 3. Other club representatives sign in once, then appear in Setup for approval.
+-- 3. Other club representatives enter their name and email, then appear in Setup for approval.
+-- 4. Once their access is approved, their dates publish immediately.
+-- 5. Configure RESEND_API_KEY in Vercel for administrator email notifications.

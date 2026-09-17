@@ -5,6 +5,7 @@
   var NOTE = 'Dates are correct at the time of publication but may be subject to change. Check Sport80 for up-to-date information.';
   var KEY = 'peak-district-trials-group-dates-v2-cache';
   var OLD_KEY = 'peak-district-trials-group-dates-v1';
+  var REGISTRATION_NAME_KEY = 'peak-district-trials-access-name';
   var names = ['FIM TrialGP','FIM TDN','FIM X - Trial','FIM X - TDN','European Championship','TrialGB','Trial GB Youth','ACU S3 Parts NTC','Normandale Masters','ACU Kickstart','SSDT','ACU Inter Centre','ACU British Sidecar','ACU Trail Bike','National Trials','Others'];
   var colours = ['#1f6fae','#c0394e','#7248a4','#327989','#2f8a60','#df8133','#c24770','#1554a3','#6c7686','#bd673c','#235b89','#7667a9','#56864b','#a15c65','#467d86','#808992'];
   var now = new Date();
@@ -19,6 +20,7 @@
   var realtimeChannel = null;
   var loadingRemote = false;
   var defaultLogoData = '';
+  var notificationAttemptedFor = '';
 
   function $(name) { return document.getElementById(name); }
   function fresh() {
@@ -199,19 +201,16 @@
   function renderAdminLists() {
     var representatives = adminProfiles.filter(function (entry) { return entry.role !== 'admin'; });
     $('profileAdminList').innerHTML = representatives.length ? representatives.map(function (entry) {
+      var person = entry.display_name || 'Name not provided';
       var options = '<option value="">Choose club…</option>' + clubs.map(function (club) { return '<option value="' + esc(club.id) + '" ' + (entry.club_id === club.id ? 'selected' : '') + '>' + esc(club.name) + '</option>'; }).join('');
-      return '<div class="admin-row" data-profile="' + esc(entry.user_id) + '"><div class="meta"><strong>' + esc(entry.email) + '</strong><small>' + (entry.approved ? 'Approved club representative' : 'Awaiting approval') + '</small></div><select aria-label="Club for ' + esc(entry.email) + '">' + options + '</select><div class="file-actions"><button class="btn primary save-profile" type="button">' + (entry.approved ? 'Save' : 'Approve') + '</button>' + (entry.approved ? '<button class="btn danger revoke-profile" type="button">Revoke</button>' : '') + '</div></div>';
+      return '<div class="admin-row" data-profile="' + esc(entry.user_id) + '"><div class="meta"><strong>' + esc(person) + '</strong><small>' + esc(entry.email) + ' · ' + (entry.approved ? 'Approved club representative' : 'Awaiting approval') + '</small></div><select aria-label="Club for ' + esc(person) + '">' + options + '</select><div class="file-actions"><button class="btn primary save-profile" type="button">' + (entry.approved ? 'Save' : 'Approve') + '</button>' + (entry.approved ? '<button class="btn danger revoke-profile" type="button">Revoke</button>' : '') + '</div></div>';
     }).join('') : '<p class="empty">No club representatives have signed in yet.</p>';
-    var pendingEvents = sorted(state.events.filter(function (event) { return event.status === 'pending'; }));
-    $('pendingEventList').innerHTML = pendingEvents.length ? pendingEvents.map(function (event) {
-      return '<div class="admin-row" data-pending-event="' + esc(event.id) + '"><div class="meta"><strong>' + esc(event.title) + '</strong><small>' + esc(range(event)) + ' · ' + esc(event.club) + '</small></div><span>' + esc(seriesFor(event).name) + '</span><div class="file-actions"><button class="btn primary approve-event" type="button">Approve</button><button class="btn danger reject-event" type="button">Reject</button></div></div>';
-    }).join('') : '<p class="empty">No dates are awaiting approval.</p>';
   }
   function renderAuthDialog() {
     $('signedOutPanel').hidden = !!user;
     $('signedInPanel').hidden = !user;
     if (user) {
-      $('signedInEmail').textContent = user.email || '';
+      $('signedInEmail').textContent = profile && profile.display_name ? profile.display_name + ' · ' + (user.email || '') : (user.email || '');
       $('signedInAccess').textContent = !profile || !profile.approved ? 'Your account is awaiting administrator approval.' : isAdmin() ? 'Administrator access' : 'Approved for ' + (profileClubName() || 'your club');
     }
   }
@@ -293,7 +292,7 @@
         series_id: event.seriesId,
         club_id: club.id,
         title: event.title,
-        status: isAdmin() ? 'approved' : 'pending',
+        status: 'approved',
         created_by: user.id
       };
       var result = editingId ? await client.from('events').update(payload).eq('id', editingId) : await client.from('events').insert(payload);
@@ -302,7 +301,7 @@
       month = Number(event.start.slice(5, 7)) - 1;
       $('eventDialog').close();
       await loadRemoteData();
-      toast(isAdmin() ? 'Trial date saved' : 'Trial date sent for approval');
+      toast('Trial date saved and published');
     } catch (error) {
       alert(messageForError(error, 'The trial date could not be saved.'));
     }
@@ -353,8 +352,7 @@
       clubId: row.club_id,
       club: club ? club.name : 'Unknown club',
       title: row.title,
-      status: row.status || 'approved',
-      createdBy: row.created_by || ''
+      status: row.status || 'approved'
     };
   }
   async function loadRemoteData() {
@@ -365,7 +363,7 @@
       var results = await Promise.all([
         client.from('series').select('id,name,colour,logo,sort_order').order('sort_order'),
         client.from('clubs').select('id,name').order('name'),
-        client.from('events').select('id,start_date,end_date,series_id,club_id,title,status,created_by,clubs(name)').order('start_date'),
+        client.from('events').select('id,start_date,end_date,series_id,club_id,title,status,clubs(name)').order('start_date'),
         client.from('app_settings').select('header_logo').eq('id', 'main').maybeSingle()
       ]);
       var failed = results.find(function (result) { return result.error; });
@@ -386,9 +384,40 @@
       loadingRemote = false;
     }
   }
+  async function applyPendingRegistrationName() {
+    if (!client || !user) return;
+    var name = '';
+    try { name = (localStorage.getItem(REGISTRATION_NAME_KEY) || '').trim(); } catch (error) {}
+    if (!name) return;
+    var result = await client.rpc('set_my_calendar_display_name', {requested_name:name});
+    if (!result.error) {
+      try { localStorage.removeItem(REGISTRATION_NAME_KEY); } catch (error) {}
+    }
+  }
+  async function notifyAdministratorOfAccessRequest(session) {
+    if (!session || !session.access_token || !profile || profile.approved || notificationAttemptedFor === user.id) return;
+    notificationAttemptedFor = user.id;
+    try {
+      var response = await fetch('/api/access-request', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', Authorization:'Bearer ' + session.access_token},
+        body: '{}'
+      });
+      if (response.ok) {
+        var result = await response.json();
+        if (result.sent) toast('Access request sent to the administrator');
+      } else {
+        console.warn('Administrator access notification was not sent.');
+      }
+    } catch (error) {
+      console.warn('Administrator access notification was not sent.');
+    }
+  }
   async function refreshSession(session) {
     user = session && session.user ? session.user : null;
+    await applyPendingRegistrationName();
     await loadRemoteData();
+    await notifyAdministratorOfAccessRequest(session);
     renderAuthDialog();
   }
   function subscribeToChanges() {
@@ -407,11 +436,10 @@
       client = window.supabase.createClient(config.url, config.key, {auth:{persistSession:true, detectSessionInUrl:true, autoRefreshToken:true}});
       var sessionResult = await client.auth.getSession();
       if (sessionResult.error) throw sessionResult.error;
-      user = sessionResult.data.session && sessionResult.data.session.user;
       client.auth.onAuthStateChange(function (_event, session) {
         setTimeout(function () { refreshSession(session); }, 0);
       });
-      await loadRemoteData();
+      await refreshSession(sessionResult.data.session);
       subscribeToChanges();
     } catch (error) {
       connectionError = error && error.message ? error.message : 'Connection unavailable';
@@ -445,16 +473,19 @@
   $('authForm').onsubmit = async function (event) {
     event.preventDefault();
     if (!client) { alert('The live connection is not ready. Refresh the page and try again.'); return; }
+    var name = $('authName').value.trim().replace(/\s+/g, ' ');
     var email = $('authEmail').value.trim().toLowerCase();
-    if (!email || !this.reportValidity()) return;
+    if (!name || !email || !this.reportValidity()) return;
     var button = this.querySelector('button[type="submit"]');
     button.disabled = true;
     try {
-      var result = await client.auth.signInWithOtp({email:email, options:{emailRedirectTo:location.origin + '/', shouldCreateUser:true}});
+      try { localStorage.setItem(REGISTRATION_NAME_KEY, name); } catch (error) {}
+      var result = await client.auth.signInWithOtp({email:email, options:{emailRedirectTo:location.origin + '/', shouldCreateUser:true, data:{display_name:name}}});
       if (result.error) throw result.error;
       $('authDialog').close();
       toast('Sign-in link sent to ' + email);
     } catch (error) {
+      try { localStorage.removeItem(REGISTRATION_NAME_KEY); } catch (storageError) {}
       alert(messageForError(error, 'The sign-in email could not be sent.'));
     } finally {
       button.disabled = false;
@@ -465,6 +496,7 @@
     await client.auth.signOut();
     user = null;
     profile = null;
+    notificationAttemptedFor = '';
     $('authDialog').close();
     await loadRemoteData();
     toast('Signed out');
@@ -629,22 +661,11 @@
     }
     if (event.target.closest('.revoke-profile')) {
       if (!confirm('Revoke this representative’s editing access?')) return;
-      var revoked = await client.from('profiles').update({approved:false}).eq('user_id', userId);
+      var revoked = await client.from('profiles').update({approved:false, access_notification_sent_at:null}).eq('user_id', userId);
       if (revoked.error) { alert(messageForError(revoked.error, 'Access could not be revoked.')); return; }
       await loadAdminProfiles(); renderAdminLists(); toast('Club access revoked');
     }
   };
-  $('pendingEventList').onclick = async function (event) {
-    var row = event.target.closest('[data-pending-event]');
-    if (!row) return;
-    var status = event.target.closest('.approve-event') ? 'approved' : event.target.closest('.reject-event') ? 'rejected' : '';
-    if (!status) return;
-    var result = await client.from('events').update({status:status}).eq('id', row.dataset.pendingEvent);
-    if (result.error) { alert(messageForError(result.error, 'The date could not be updated.')); return; }
-    await loadRemoteData();
-    toast(status === 'approved' ? 'Date approved and published' : 'Date rejected');
-  };
-
   function download(name, text, type) {
     var url = URL.createObjectURL(new Blob([text], {type:type}));
     var link = document.createElement('a');
@@ -698,7 +719,7 @@
         var sourceEvent = data.events[eventIndex];
         if (!/^\d{4}-\d{2}-\d{2}$/.test(sourceEvent.start) || !/^\d{4}-\d{2}-\d{2}$/.test(sourceEvent.end) || sourceEvent.end < sourceEvent.start || !sourceEvent.title || !sourceEvent.club || !sourceEvent.seriesId) throw new Error('Invalid event data');
         var eventClub = await resolveClub(String(sourceEvent.club));
-        var inserted = await client.from('events').insert({start_date:sourceEvent.start, end_date:sourceEvent.end, series_id:String(sourceEvent.seriesId), club_id:eventClub.id, title:String(sourceEvent.title), status:sourceEvent.status === 'pending' || sourceEvent.status === 'rejected' ? sourceEvent.status : 'approved', created_by:user.id});
+        var inserted = await client.from('events').insert({start_date:sourceEvent.start, end_date:sourceEvent.end, series_id:String(sourceEvent.seriesId), club_id:eventClub.id, title:String(sourceEvent.title), status:sourceEvent.status === 'rejected' ? 'rejected' : 'approved', created_by:user.id});
         if (inserted.error) throw inserted.error;
       }
       var settingsResult = await client.from('app_settings').upsert({id:'main', header_logo:safeLogo(data.acuLogo)});
