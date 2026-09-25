@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#3333cc">
-<meta name="application-name" content="Peak District Trials Dates">
-<meta name="apple-mobile-web-app-title" content="Peak Trials Dates">
+<meta name="application-name" content="UK TRIALS DATES">
+<meta name="apple-mobile-web-app-title" content="UK TRIALS DATES">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link id="appIcon" rel="icon" type="image/png">
 <link id="appleTouchIcon" rel="apple-touch-icon">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Peak District Trials Group Dates App</title>
+<title>UK TRIALS DATES</title>
 <style>
 :root{--navy:#102b46;--blue:#165c9b;--acu-blue:#3333cc;--paper:#f4f6f8;--ink:#172536;--muted:#637487;--line:#dce3ea}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
@@ -84,7 +84,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
 <header class="masthead"><div class="mast-inner">
  <img id="headerLogo" class="brand-logo" alt="Peak District Trials Group logo">
  <strong id="brandFallback" class="brand-fallback">PDTG</strong>
- <div><h1>Peak District Trials Group</h1><p>Trials dates · Plan the season and spot clashes before publication.</p></div>
+ <div><h1>UK TRIALS DATES</h1><p>Trials dates · Plan the season and spot clashes before publication.</p></div>
  <span id="mastYear" class="mast-year"></span>
 </div></header>
 <div class="toolbar">
@@ -136,10 +136,12 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
 <dialog id="authDialog"><div class="modal">
  <h2>Club access</h2>
  <div id="signedOutPanel">
-  <p>Enter your name and email address and the app will send a secure sign-in link. New club representatives must be approved by the administrator before they can add dates.</p>
+  <p>Enter your name, club name and email address and the app will send a secure sign-in link. New club representatives must be approved by the administrator before they can add dates.</p>
   <form id="authForm"><label class="full-field">Your name
    <input id="authName" type="text" autocomplete="name" minlength="2" maxlength="100" required placeholder="Full name"></label>
    <p class="hint" style="margin-top:7px">Your name is shown only to the calendar administrator and will not appear on the public calendar.</p>
+   <label class="full-field" style="margin-bottom:13px">Club name
+   <input id="authClub" name="club_name" type="text" autocomplete="organization" maxlength="120" required placeholder="Your club name"></label>
    <label class="full-field">Email address
    <input id="authEmail" type="email" autocomplete="email" required placeholder="name@example.com"></label>
    <p class="hint" style="margin-top:7px">To use another phone, tablet or computer, enter the same details on that device and open its new sign-in link. Your existing approval will carry across.</p>
@@ -167,7 +169,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
  <div class="actions"><button id="closeSubscribe" class="btn" type="button">Close</button><a id="deviceSubscribe" class="btn dark" href="#">Subscribe on this device</a></div>
 </div></dialog>
 <dialog id="setupDialog"><div class="modal">
- <h2>Peak District calendar setup</h2><p>Change the dropdown names and colours, or add logos for the header and series.</p>
+ <h2>UK TRIALS DATES setup</h2><p>Change the dropdown names and colours, or add logos for the header and series.</p>
  <div class="setup-group"><h3>App logo and thumbnail</h3>
   <label class="full-field">Upload a replacement logo (PNG, JPG or WebP)
    <input id="acuUpload" type="file" accept="image/png,image/jpeg,image/webp"></label>

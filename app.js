@@ -212,6 +212,9 @@
     if (user) {
       $('signedInEmail').textContent = profile && profile.display_name ? profile.display_name + ' · ' + (user.email || '') : (user.email || '');
       $('signedInAccess').textContent = !profile || !profile.approved ? 'Your account is awaiting administrator approval.' : isAdmin() ? 'Administrator access' : 'Approved for ' + (profileClubName() || 'your club');
+      if ((!profile || !profile.approved) && user.user_metadata && user.user_metadata.club_name) {
+        $('signedInAccess').textContent += ' Club: ' + user.user_metadata.club_name;
+      }
     }
   }
   function render() {
@@ -474,13 +477,16 @@
     event.preventDefault();
     if (!client) { alert('The live connection is not ready. Refresh the page and try again.'); return; }
     var name = $('authName').value.trim().replace(/\s+/g, ' ');
+    var clubName = $('authClub').value.trim().replace(/\s+/g, ' ');
     var email = $('authEmail').value.trim().toLowerCase();
-    if (!name || !email || !this.reportValidity()) return;
+    if (!this.reportValidity()) return;
+    if (!clubName) { alert('Enter your club name.'); $('authClub').focus(); return; }
+    if (!name || !email) return;
     var button = this.querySelector('button[type="submit"]');
     button.disabled = true;
     try {
       try { localStorage.setItem(REGISTRATION_NAME_KEY, name); } catch (error) {}
-      var result = await client.auth.signInWithOtp({email:email, options:{emailRedirectTo:location.origin + '/', shouldCreateUser:true, data:{display_name:name}}});
+      var result = await client.auth.signInWithOtp({email:email, options:{emailRedirectTo:location.origin + '/', shouldCreateUser:true, data:{display_name:name, club_name:clubName}}});
       if (result.error) throw result.error;
       $('authDialog').close();
       toast('Sign-in link sent to ' + email);
