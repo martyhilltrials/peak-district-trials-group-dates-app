@@ -745,7 +745,7 @@
 
   function printContent() {
     var logo = headerLogoValue();
-    $('printSheet').innerHTML = '<div class="print-heading"><img src="' + logo + '" alt="Peak District Trials Group logo"><h1>' + state.year + ' Peak District Trials Group Dates</h1></div>' +
+    $('printSheet').innerHTML = '<div class="print-heading"><img src="' + logo + '" alt="Peak District Trials Group logo"><h1>' + state.year + ' UK TRIALS DATES</h1></div>' +
       Array.from({length:12}, function (_, index) {
         var events = monthEntries(index, true, true);
         return '<section class="print-month"><h2>' + monthName(index) + '</h2>' + (events.length ? events.map(function (event) {
@@ -769,9 +769,9 @@
       }).join('') : '<p class="none">No dates entered</p>') + '</section>';
     }).join('');
     var months = Array.from({length:12}, function (_, index) { return '<a href="#m' + index + '">' + monthName(index).slice(0, 3) + '</a>'; }).join('');
-    var mobile = '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + state.year + ' Peak District Trials Group Dates</title>' +
+    var mobile = '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + state.year + ' UK TRIALS DATES</title>' +
       '<style>*{box-sizing:border-box}body{margin:0;background:#f2f5f8;color:#15263a;font:16px/1.45 system-ui,sans-serif}header{background:#102b46;color:white;padding:21px 17px;display:flex;align-items:center;gap:15px}header img{width:78px;height:78px;object-fit:contain;background:white;border-radius:50%;padding:3px}h1{font-size:27px;line-height:1.12;margin:0}nav{display:flex;gap:7px;overflow-x:auto;padding:12px;position:sticky;top:0;background:white;border-bottom:1px solid #dce3ea}nav a{white-space:nowrap;color:#3333cc;text-decoration:none;background:#eeeeff;border-radius:7px;padding:9px}main{max-width:720px;margin:auto;padding:0 14px 25px}section{scroll-margin-top:66px}h2{margin:27px 0 9px;border-bottom:3px solid #3333cc;padding-bottom:6px}article{background:white;border-left:5px solid #3333cc;border-radius:8px;padding:13px;margin:8px 0;box-shadow:0 2px 9px #1225360e}.date{color:#3333cc;font-weight:800}.detail{display:flex;align-items:center;gap:10px;margin-top:5px}.detail img{width:42px;height:36px;object-fit:contain}strong,small{display:block}small,.none,footer{color:#637487}footer{padding:17px;background:white;font-size:13px}</style></head><body>' +
-      '<header><img src="' + logo + '" alt="Peak District Trials Group logo"><h1>' + state.year + ' Peak District Trials Group Dates</h1></header><nav aria-label="Months">' + months + '</nav><main>' + sections + '</main><footer>' + esc(NOTE) + '</footer></body></html>';
+      '<header><img src="' + logo + '" alt="Peak District Trials Group logo"><h1>' + state.year + ' UK TRIALS DATES</h1></header><nav aria-label="Months">' + months + '</nav><main>' + sections + '</main><footer>' + esc(NOTE) + '</footer></body></html>';
     download('peak-district-trials-dates-' + state.year + '-mobile.html', mobile, 'text/html;charset=utf-8');
   };
   render();
