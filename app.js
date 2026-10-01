@@ -367,8 +367,24 @@
   async function loadAdminProfiles() {
     adminProfiles = [];
     if (!client || !isAdmin()) return;
-    var result = await client.from('profiles').select('user_id,email,display_name,requested_club_name,club_id,role,approved').order('email');
-    if (!result.error) adminProfiles = result.data || [];
+
+    // Load every representative in batches so the app itself never imposes a
+    // fixed registration/listing limit (Supabase projects can have their own
+    // service/rate limits, but we do not cap the number of representatives here).
+    var batchSize = 1000;
+    var from = 0;
+    while (true) {
+      var result = await client
+        .from('profiles')
+        .select('user_id,email,display_name,requested_club_name,club_id,role,approved')
+        .order('email')
+        .range(from, from + batchSize - 1);
+      if (result.error) return;
+      var rows = result.data || [];
+      adminProfiles = adminProfiles.concat(rows);
+      if (rows.length < batchSize) break;
+      from += batchSize;
+    }
   }
   function mapEvent(row) {
     var relatedClub = Array.isArray(row.clubs) ? row.clubs[0] : row.clubs;

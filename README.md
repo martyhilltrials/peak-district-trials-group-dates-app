@@ -44,6 +44,11 @@ The representative's name is stored only in their private access profile and is 
 
 An approved representative can stay signed in on multiple devices, such as a laptop and mobile phone. On each additional device they choose **Club sign in**, enter the same name and email address, and open the new sign-in link on that device. Their existing club assignment and approval carry across automatically. Each sign-in link is single-use, so it should not be forwarded between devices. The administrator receives only the original pending-access notification, not a new request for every device.
 
+
+### Representative registrations
+
+The app does not set a maximum number of club/centre representative registrations. The administrator list is loaded in batches so all registered representatives can be managed even if the list grows beyond Supabase's normal single-query row return limit. Supabase's own plan, authentication email and anti-abuse/rate limits still apply at service level.
+
 ## Administrator email notifications
 
 The notification function uses Resend through Vercel. In Vercel:
