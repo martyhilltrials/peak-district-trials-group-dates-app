@@ -8,6 +8,9 @@ begin;
 alter table public.profiles
   add column if not exists access_notification_sent_at timestamptz;
 
+alter table public.profiles
+  add column if not exists requested_club_name text not null default '';
+
 alter table public.events
   alter column status set default 'approved';
 
@@ -43,22 +46,25 @@ as $$
 declare
   is_first_admin boolean := lower(coalesce(new.email, '')) = 'martyhilltrials@gmail.com';
   profile_name text := left(regexp_replace(trim(coalesce(new.raw_user_meta_data ->> 'display_name', '')), '[[:space:]]+', ' ', 'g'), 100);
+  requested_club text := left(regexp_replace(trim(coalesce(new.raw_user_meta_data ->> 'club_name', '')), '[[:space:]]+', ' ', 'g'), 120);
 begin
   if new.email is null then
     return new;
   end if;
 
-  insert into public.profiles as existing (user_id, email, display_name, role, approved)
+  insert into public.profiles as existing (user_id, email, display_name, requested_club_name, role, approved)
   values (
     new.id,
     lower(new.email),
     profile_name,
+    requested_club,
     case when is_first_admin then 'admin' else 'club' end,
     is_first_admin
   )
   on conflict (user_id) do update
     set email = excluded.email,
         display_name = case when profile_name <> '' then profile_name else existing.display_name end,
+        requested_club_name = case when requested_club <> '' then requested_club else existing.requested_club_name end,
         role = case when is_first_admin then 'admin' else existing.role end,
         approved = case when is_first_admin then true else existing.approved end,
         updated_at = now();
@@ -126,11 +132,12 @@ as $$
     and approved = false;
 $$;
 
-insert into public.profiles as existing (user_id, email, display_name, role, approved)
+insert into public.profiles as existing (user_id, email, display_name, requested_club_name, role, approved)
 select
   id,
   lower(email),
   left(regexp_replace(trim(coalesce(raw_user_meta_data ->> 'display_name', '')), '[[:space:]]+', ' ', 'g'), 100),
+  left(regexp_replace(trim(coalesce(raw_user_meta_data ->> 'club_name', '')), '[[:space:]]+', ' ', 'g'), 120),
   case when lower(email) = 'martyhilltrials@gmail.com' then 'admin' else 'club' end,
   lower(email) = 'martyhilltrials@gmail.com'
 from auth.users
@@ -138,6 +145,7 @@ where email is not null
 on conflict (user_id) do update
   set email = excluded.email,
       display_name = case when excluded.display_name <> '' then excluded.display_name else existing.display_name end,
+      requested_club_name = case when excluded.requested_club_name <> '' then excluded.requested_club_name else existing.requested_club_name end,
       role = case when excluded.email = 'martyhilltrials@gmail.com' then 'admin' else existing.role end,
       approved = case when excluded.email = 'martyhilltrials@gmail.com' then true else existing.approved end,
       updated_at = now();

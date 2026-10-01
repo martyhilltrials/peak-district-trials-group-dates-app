@@ -13,7 +13,7 @@ This folder is ready to deploy to the existing Vercel project. It uses the Supab
 
 ### Updating an existing live installation
 
-After uploading this version, run `Peak_District_Trials_Group_Update_Auto_Publish_Name_Email.sql` once in **Supabase → SQL Editor → New query**. Do not rerun the complete setup file. The update publishes any existing pending dates and changes future club dates to publish immediately.
+After uploading this version, run `Peak_District_Trials_Group_Update_Auto_Publish_Name_Email.sql` once in **Supabase → SQL Editor → New query**. Do not rerun the complete setup file. The update also adds the stored requested club/centre field used by the approval screen.
 
 ## Update Vercel
 
@@ -29,12 +29,12 @@ That address is automatically approved as the administrator.
 
 ## Add a club representative
 
-1. The representative enters their name and email address under **Club sign in**.
+1. The representative presses **Club/Centre Representative Log In** and enters their name, club/centre and email address.
 2. They open the secure sign-in link received by email.
 3. The administrator receives an access-request notification at `martyhilltrials@gmail.com`.
 4. The administrator opens **Setup** in the app.
-5. Add their club if necessary.
-6. Assign the representative to the club and press **Approve**.
+5. Their requested club/centre is shown beside their name.
+6. Press **Approve**. If that club/centre does not already exist, the app creates it and assigns it automatically. You can choose a different club/centre before approval if needed.
 
 The representative's name is stored only in their private access profile and is not shown on the calendar, PDF, Mobile HTML or calendar subscription. Once access is approved, club representatives can add and edit their own club's dates and those dates publish immediately without a second approval.
 

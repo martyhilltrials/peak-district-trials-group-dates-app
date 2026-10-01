@@ -144,7 +144,7 @@
   function renderAccess() {
     $('newEvent').hidden = !canAddDates();
     $('openSetup').hidden = !isAdmin();
-    $('authButton').textContent = user ? 'Account' : 'Club sign in';
+    $('representativeLogin').textContent = user ? 'Club/Centre Representative Account' : 'Club/Centre Representative Log In';
     if (connectionError) setConnectionStatus('Offline copy', 'error');
     else if (!remoteReady) setConnectionStatus('Connecting…', '');
     else if (!user) setConnectionStatus('Live calendar', 'live');
@@ -202,9 +202,16 @@
     var representatives = adminProfiles.filter(function (entry) { return entry.role !== 'admin'; });
     $('profileAdminList').innerHTML = representatives.length ? representatives.map(function (entry) {
       var person = entry.display_name || 'Name not provided';
-      var options = '<option value="">Choose club…</option>' + clubs.map(function (club) { return '<option value="' + esc(club.id) + '" ' + (entry.club_id === club.id ? 'selected' : '') + '>' + esc(club.name) + '</option>'; }).join('');
-      return '<div class="admin-row" data-profile="' + esc(entry.user_id) + '"><div class="meta"><strong>' + esc(person) + '</strong><small>' + esc(entry.email) + ' · ' + (entry.approved ? 'Approved club representative' : 'Awaiting approval') + '</small></div><select aria-label="Club for ' + esc(person) + '">' + options + '</select><div class="file-actions"><button class="btn primary save-profile" type="button">' + (entry.approved ? 'Save' : 'Approve') + '</button>' + (entry.approved ? '<button class="btn danger revoke-profile" type="button">Revoke</button>' : '') + '</div></div>';
-    }).join('') : '<p class="empty">No club representatives have signed in yet.</p>';
+      var requestedClub = (entry.requested_club_name || '').trim();
+      var suggestedClub = entry.club_id || '';
+      if (!suggestedClub && requestedClub) {
+        var matchingClub = clubs.find(function (club) { return club.name.toLowerCase() === requestedClub.toLowerCase(); });
+        if (matchingClub) suggestedClub = matchingClub.id;
+      }
+      var options = '<option value="">' + (requestedClub ? 'Use requested club/centre…' : 'Choose club/centre…') + '</option>' + clubs.map(function (club) { return '<option value="' + esc(club.id) + '" ' + (suggestedClub === club.id ? 'selected' : '') + '>' + esc(club.name) + '</option>'; }).join('');
+      var requested = requestedClub ? '<span class="requested-club"><b>Requested club/centre:</b> ' + esc(requestedClub) + '</span>' : '<span class="requested-club"><b>Requested club/centre:</b> Not provided</span>';
+      return '<div class="admin-row" data-profile="' + esc(entry.user_id) + '" data-requested-club="' + esc(requestedClub) + '"><div class="meta"><strong>' + esc(person) + '</strong><small>' + esc(entry.email) + ' · ' + (entry.approved ? 'Approved representative' : 'Awaiting approval') + '</small>' + requested + '</div><select aria-label="Club or centre for ' + esc(person) + '">' + options + '</select><div class="file-actions"><button class="btn primary save-profile" type="button">' + (entry.approved ? 'Save' : 'Approve') + '</button>' + (entry.approved ? '<button class="btn danger revoke-profile" type="button">Revoke</button>' : '') + '</div></div>';
+    }).join('') : '<p class="empty">No club or centre representatives have signed in yet.</p>';
   }
   function renderAuthDialog() {
     $('signedOutPanel').hidden = !!user;
@@ -335,13 +342,13 @@
   async function loadProfile() {
     profile = null;
     if (!client || !user) return;
-    var result = await client.from('profiles').select('user_id,email,display_name,club_id,role,approved').eq('user_id', user.id).maybeSingle();
+    var result = await client.from('profiles').select('user_id,email,display_name,requested_club_name,club_id,role,approved').eq('user_id', user.id).maybeSingle();
     if (!result.error) profile = result.data;
   }
   async function loadAdminProfiles() {
     adminProfiles = [];
     if (!client || !isAdmin()) return;
-    var result = await client.from('profiles').select('user_id,email,display_name,club_id,role,approved').order('email');
+    var result = await client.from('profiles').select('user_id,email,display_name,requested_club_name,club_id,role,approved').order('email');
     if (!result.error) adminProfiles = result.data || [];
   }
   function mapEvent(row) {
@@ -470,7 +477,7 @@
     renderAuthDialog();
     $('authDialog').showModal();
   }
-  $('authButton').onclick = openAuth;
+  $('representativeLogin').onclick = openAuth;
   $('cancelAuth').onclick = function () { $('authDialog').close(); };
   $('closeAuth').onclick = function () { $('authDialog').close(); };
   $('authForm').onsubmit = async function (event) {
@@ -660,10 +667,21 @@
     var userId = row.dataset.profile;
     if (event.target.closest('.save-profile')) {
       var clubId = row.querySelector('select').value;
-      if (!clubId) { alert('Choose a club before approving this representative.'); return; }
+      var requestedClub = (row.dataset.requestedClub || '').trim();
+      if (!clubId && requestedClub) {
+        try {
+          var resolvedClub = await resolveClub(requestedClub);
+          clubId = resolvedClub.id;
+        } catch (error) {
+          alert(messageForError(error, 'The requested club/centre could not be created or assigned.'));
+          return;
+        }
+      }
+      if (!clubId) { alert('Choose a club/centre before approving this representative.'); return; }
       var saved = await client.from('profiles').update({club_id:clubId, role:'club', approved:true}).eq('user_id', userId);
       if (saved.error) { alert(messageForError(saved.error, 'The representative could not be approved.')); return; }
-      await loadAdminProfiles(); renderAdminLists(); toast('Club access saved');
+      await loadRemoteData();
+      toast('Representative approved and club/centre assigned');
     }
     if (event.target.closest('.revoke-profile')) {
       if (!confirm('Revoke this representative’s editing access?')) return;

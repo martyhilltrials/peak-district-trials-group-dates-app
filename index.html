@@ -21,7 +21,8 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
 .brand-fallback{display:none;background:white;color:var(--blue);padding:12px;border-radius:9px;font-size:23px;font-weight:900}
 .masthead h1{margin:0;font-size:clamp(25px,3.5vw,42px);line-height:1.1}.masthead p{margin:5px 0 0;color:#d7e3ee}
 .mast-year{margin-left:auto;color:var(--acu-blue);background:white;border-radius:10px;padding:5px 10px;font-size:clamp(42px,6vw,78px);font-weight:900;line-height:1}
-.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;max-width:1400px;margin:18px auto;padding:0 18px}
+.rep-login-wrap{max-width:1400px;margin:18px auto 0;padding:0 18px}.rep-login-btn{width:100%;min-height:58px;border:0;border-radius:11px;background:var(--acu-blue);color:white;font-size:clamp(17px,2.2vw,23px);font-weight:850;letter-spacing:.01em;box-shadow:0 5px 16px #3333cc26}.rep-login-btn:hover{background:#2929a3}.rep-login-btn[hidden]{display:none}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;max-width:1400px;margin:12px auto 18px;padding:0 18px}
 .toolbar label{font-weight:700}.toolbar input[type=number]{width:95px}.toolbar select{max-width:210px}.toolbar .push{margin-left:auto}
 input,select{background:white;color:var(--ink);border:1px solid #b7c5d2;border-radius:8px;padding:10px 11px;min-height:42px}
 .btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #c9d5e0;border-radius:8px;background:white;color:var(--ink);padding:9px 13px;min-height:42px;font-weight:650;text-decoration:none}
@@ -62,7 +63,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
 .subscription-url{display:grid;gap:6px;font-weight:650}.copy-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.copy-row input{width:100%;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
 .subscription-help{margin-top:16px;border-left:4px solid var(--acu-blue);background:#eeeeff;padding:12px 14px;border-radius:5px;color:#35356f}.subscription-help h3{margin:0 0 4px;font-size:15px}.subscription-help h3:not(:first-child){margin-top:13px}.subscription-help p{margin:0;color:#4d4d7a;font-size:13px}
 .admin-list{display:grid;gap:8px}.admin-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(150px,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:9px}
-.admin-row .meta{min-width:0}.admin-row .meta strong,.admin-row .meta small{display:block;overflow-wrap:anywhere}.admin-row .meta small{color:var(--muted)}
+.admin-row .meta{min-width:0}.admin-row .meta strong,.admin-row .meta small{display:block;overflow-wrap:anywhere}.admin-row .meta small{color:var(--muted)}.requested-club{display:block;margin-top:5px;font-size:12px;color:var(--blue);overflow-wrap:anywhere}
 .admin-row select{width:100%}.connection-help{border-left:4px solid var(--acu-blue);background:#eeeeff;padding:10px 12px;border-radius:5px;color:#35356f}
 #toast{position:fixed;right:16px;bottom:16px;z-index:10;background:var(--navy);color:white;padding:12px 16px;border-radius:9px;display:none;max-width:330px}
 #printSheet{display:none}
@@ -87,6 +88,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
  <div><h1>UK TRIALS DATES</h1><p>Trials dates · Plan the season and spot clashes before publication.</p></div>
  <span id="mastYear" class="mast-year"></span>
 </div></header>
+<div class="rep-login-wrap"><button id="representativeLogin" class="rep-login-btn" type="button">Club/Centre Representative Log In</button></div>
 <div class="toolbar">
  <label for="yearInput">Year</label><input id="yearInput" type="number" min="1900" max="2100">
  <select id="mobileFilter" aria-label="Filter by series"></select>
@@ -134,14 +136,14 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
  <button id="confirmClash" class="btn primary" type="button">Confirm and save</button></div>
 </div></dialog>
 <dialog id="authDialog"><div class="modal">
- <h2>Club access</h2>
+ <h2>Club/Centre representative access</h2>
  <div id="signedOutPanel">
-  <p>Enter your name, club name and email address and the app will send a secure sign-in link. New club representatives must be approved by the administrator before they can add dates.</p>
+  <p>Enter your name, club or centre, and email address. The app will send a secure sign-in link. New representatives must be approved by the administrator before they can add dates.</p>
   <form id="authForm"><label class="full-field">Your name
    <input id="authName" type="text" autocomplete="name" minlength="2" maxlength="100" required placeholder="Full name"></label>
    <p class="hint" style="margin-top:7px">Your name is shown only to the calendar administrator and will not appear on the public calendar.</p>
-   <label class="full-field" style="margin-bottom:13px">Club name
-   <input id="authClub" name="club_name" type="text" autocomplete="organization" maxlength="120" required placeholder="Your club name"></label>
+   <label class="full-field" style="margin-bottom:13px">Club / centre
+   <input id="authClub" name="club_name" type="text" autocomplete="organization" maxlength="120" required placeholder="Your club or centre"></label>
    <label class="full-field">Email address
    <input id="authEmail" type="email" autocomplete="email" required placeholder="name@example.com"></label>
    <p class="hint" style="margin-top:7px">To use another phone, tablet or computer, enter the same details on that device and open its new sign-in link. Your existing approval will carry across.</p>
@@ -183,7 +185,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
   </div>
  </div>
  <div id="adminArea" class="setup-group" hidden><h3>Live calendar administration</h3>
-  <p class="hint">Approve each club representative and assign their club. Once approved, their dates are published immediately.</p>
+  <p class="hint">Each registration shows the club/centre entered by the representative. When you approve them, that club/centre is assigned to their account automatically. You can change it before approval if required.</p>
   <h4>Clubs</h4><div class="file-actions"><input id="newClubName" type="text" maxlength="120" placeholder="Club name" aria-label="Club name"><button id="addClub" class="btn" type="button">Add club</button></div>
   <h4>Club representatives</h4><div id="profileAdminList" class="admin-list"></div>
  </div>
