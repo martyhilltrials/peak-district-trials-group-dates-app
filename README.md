@@ -13,6 +13,8 @@ This folder is ready to deploy to the existing Vercel project. It uses the Supab
 
 ### Updating an existing live installation
 
+This version adds an optional **Club / Event Logo** to each individual date. Run the supplied update SQL once after deploying this version so the `events` table has the new `event_logo` field.
+
 After uploading this version, run `Peak_District_Trials_Group_Update_Auto_Publish_Name_Email.sql` once in **Supabase → SQL Editor → New query**. Do not rerun the complete setup file. The update also adds the stored requested club/centre field used by the approval screen.
 
 ## Update Vercel

@@ -21,6 +21,7 @@
   var loadingRemote = false;
   var defaultLogoData = '';
   var notificationAttemptedFor = '';
+  var authMode = 'representative';
 
   function $(name) { return document.getElementById(name); }
   function fresh() {
@@ -50,6 +51,7 @@
   var month = state.year === now.getFullYear() ? now.getMonth() : 0;
   var filter = 'all';
   var editingId = null;
+  var editingLogo = '';
   var pending = null;
   var selectedDay = '';
 
@@ -70,6 +72,15 @@
   function safeLogo(value) { return /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value || '') ? value : ''; }
   function headerLogoValue() { return safeLogo(state.acuLogo) || defaultLogoData || DEFAULT_GROUP_LOGO; }
   function logoTag(value, label) { return safeLogo(value) ? '<img class="mini-logo" src="' + value + '" alt="' + esc(label) + '">' : ''; }
+  function eventLogoValue(event) { return safeLogo(event && event.logo) || safeLogo(seriesFor(event).logo); }
+  function refreshEventLogoPreview() {
+    var image = $('eventLogoPreview');
+    var remove = $('removeEventLogo');
+    if (!image || !remove) return;
+    image.src = editingLogo || '';
+    image.hidden = !editingLogo;
+    remove.hidden = !editingLogo;
+  }
   function makeId() { return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); }
   function pad(number) { return String(number).padStart(2, '0'); }
   function iso(year, monthNumber, day) { return year + '-' + pad(monthNumber + 1) + '-' + pad(day); }
@@ -142,9 +153,12 @@
     $('appleTouchIcon').href = logo;
   }
   function renderAccess() {
-    $('newEvent').hidden = !canAddDates();
-    $('openSetup').hidden = !isAdmin();
-    $('representativeLogin').textContent = user ? 'Club/Centre Representative Account' : 'Club/Centre Representative Log In';
+    // Editing controls never appear on the public calendar until somebody has signed in.
+    $('newEvent').hidden = !user;
+    $('openSetup').hidden = !(user && isAdmin());
+    $('representativeLogin').textContent = user ? 'Account' : 'Club/Centre Representative Log In';
+    $('authButton').textContent = 'Admin sign in';
+    $('authButton').hidden = !!user;
     if (connectionError) setConnectionStatus('Offline copy', 'error');
     else if (!remoteReady) setConnectionStatus('Connecting…', '');
     else if (!user) setConnectionStatus('Live calendar', 'live');
@@ -188,7 +202,7 @@
     $('calendarGrid').innerHTML = cells;
     $('agendaList').innerHTML = entries.length ? entries.map(function (event) {
       var series = seriesFor(event);
-      return '<div class="event-row"><div class="date-block">' + esc(range(event)) + '</div>' + logoTag(series.logo, series.name) + '<div class="event-text"><strong>' + esc(event.title) + '</strong><small>' + esc(series.name) + ' · ' + esc(event.club) + '</small>' + statusLabel(event) + '</div>' + (canEditEvent(event) ? '<button class="btn" type="button" data-edit="' + esc(event.id) + '">Edit</button>' : '') + '</div>';
+      return '<div class="event-row"><div class="date-block">' + esc(range(event)) + '</div>' + logoTag(eventLogoValue(event), event.title) + '<div class="event-text"><strong>' + esc(event.title) + '</strong><small>' + esc(series.name) + ' · ' + esc(event.club) + '</small>' + statusLabel(event) + '</div>' + (canEditEvent(event) ? '<button class="btn" type="button" data-edit="' + esc(event.id) + '">Edit</button>' : '') + '</div>';
     }).join('') : '<p class="empty">No dates entered for this month.' + (canAddDates() ? ' Click a day to add one.' : '') + '</p>';
   }
   function renderSetup() {
@@ -249,6 +263,9 @@
     $('eventClub').value = event ? event.club : (isAdmin() ? '' : profileClubName());
     $('eventClub').readOnly = !isAdmin();
     $('eventTitle').value = event ? event.title : '';
+    editingLogo = event ? safeLogo(event.logo) : '';
+    $('eventLogo').value = '';
+    refreshEventLogoPreview();
     $('deleteEvent').hidden = !event;
     $('eventDialog').showModal();
   }
@@ -259,7 +276,8 @@
       end: $('endDate').value,
       seriesId: $('eventSeries').value,
       club: $('eventClub').value.trim(),
-      title: $('eventTitle').value.trim()
+      title: $('eventTitle').value.trim(),
+      logo: editingLogo
     };
   }
   function conflicts(event) {
@@ -302,6 +320,7 @@
         series_id: event.seriesId,
         club_id: club.id,
         title: event.title,
+        event_logo: safeLogo(event.logo),
         status: 'approved',
         created_by: user.id
       };
@@ -362,6 +381,7 @@
       clubId: row.club_id,
       club: club ? club.name : 'Unknown club',
       title: row.title,
+      logo: safeLogo(row.event_logo),
       status: row.status || 'approved'
     };
   }
@@ -373,7 +393,7 @@
       var results = await Promise.all([
         client.from('series').select('id,name,colour,logo,sort_order').order('sort_order'),
         client.from('clubs').select('id,name').order('name'),
-        client.from('events').select('id,start_date,end_date,series_id,club_id,title,status,clubs(name)').order('start_date'),
+        client.from('events').select('id,start_date,end_date,series_id,club_id,title,event_logo,status,clubs(name)').order('start_date'),
         client.from('app_settings').select('header_logo').eq('id', 'main').maybeSingle()
       ]);
       var failed = results.find(function (result) { return result.error; });
@@ -473,37 +493,66 @@
     } catch (error) {}
   }
 
-  function openAuth() {
+  function openAuth(mode) {
+    authMode = mode || 'representative';
+    var adminMode = authMode === 'admin' && !user;
+    $('authHeading').textContent = adminMode ? 'Administrator sign in' : 'Club/Centre representative access';
+    $('authIntro').textContent = adminMode
+      ? 'Enter your administrator email address and the app will send you a secure sign-in link.'
+      : 'Enter your name, club or centre, and email address. The app will send a secure sign-in link. New representatives must be approved by the administrator before they can add dates.';
+    $('representativeFields').hidden = adminMode;
+    $('authName').required = !adminMode;
+    $('authClub').required = !adminMode;
     renderAuthDialog();
     $('authDialog').showModal();
   }
-  $('representativeLogin').onclick = openAuth;
+  $('representativeLogin').onclick = function () { openAuth('representative'); };
+  $('authButton').onclick = function () { openAuth('admin'); };
   $('cancelAuth').onclick = function () { $('authDialog').close(); };
   $('closeAuth').onclick = function () { $('authDialog').close(); };
   $('authForm').onsubmit = async function (event) {
     event.preventDefault();
     if (!client) { alert('The live connection is not ready. Refresh the page and try again.'); return; }
+    var adminMode = authMode === 'admin';
     var name = $('authName').value.trim().replace(/\s+/g, ' ');
     var clubName = $('authClub').value.trim().replace(/\s+/g, ' ');
     var email = $('authEmail').value.trim().toLowerCase();
     if (!this.reportValidity()) return;
-    if (!clubName) { alert('Enter your club name.'); $('authClub').focus(); return; }
-    if (!name || !email) return;
+    if (!adminMode && !clubName) { alert('Enter your club or centre.'); $('authClub').focus(); return; }
+    if ((!adminMode && !name) || !email) return;
     var button = this.querySelector('button[type="submit"]');
     button.disabled = true;
     try {
-      try { localStorage.setItem(REGISTRATION_NAME_KEY, name); } catch (error) {}
-      var result = await client.auth.signInWithOtp({email:email, options:{emailRedirectTo:location.origin + '/', shouldCreateUser:true, data:{display_name:name, club_name:clubName}}});
+      var options = {emailRedirectTo:location.origin + '/', shouldCreateUser:!adminMode};
+      if (!adminMode) {
+        try { localStorage.setItem(REGISTRATION_NAME_KEY, name); } catch (error) {}
+        options.data = {display_name:name, club_name:clubName};
+      }
+      var result = await client.auth.signInWithOtp({email:email, options:options});
       if (result.error) throw result.error;
       $('authDialog').close();
-      toast('Sign-in link sent to ' + email);
+      toast((adminMode ? 'Administrator sign-in link sent to ' : 'Sign-in link sent to ') + email);
     } catch (error) {
-      try { localStorage.removeItem(REGISTRATION_NAME_KEY); } catch (storageError) {}
-      alert(messageForError(error, 'The sign-in email could not be sent.'));
+      if (!adminMode) { try { localStorage.removeItem(REGISTRATION_NAME_KEY); } catch (storageError) {} }
+      alert(messageForError(error, adminMode ? 'The administrator sign-in email could not be sent.' : 'The sign-in email could not be sent.'));
     } finally {
       button.disabled = false;
     }
   };
+  $('eventLogo').onchange = async function (event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var logo = await prepareLogo(file);
+    if (!logo) { event.target.value = ''; return; }
+    editingLogo = logo;
+    refreshEventLogoPreview();
+  };
+  $('removeEventLogo').onclick = function () {
+    editingLogo = '';
+    $('eventLogo').value = '';
+    refreshEventLogoPreview();
+  };
+
   $('signOut').onclick = async function () {
     if (!client) return;
     await client.auth.signOut();
@@ -743,7 +792,7 @@
         var sourceEvent = data.events[eventIndex];
         if (!/^\d{4}-\d{2}-\d{2}$/.test(sourceEvent.start) || !/^\d{4}-\d{2}-\d{2}$/.test(sourceEvent.end) || sourceEvent.end < sourceEvent.start || !sourceEvent.title || !sourceEvent.club || !sourceEvent.seriesId) throw new Error('Invalid event data');
         var eventClub = await resolveClub(String(sourceEvent.club));
-        var inserted = await client.from('events').insert({start_date:sourceEvent.start, end_date:sourceEvent.end, series_id:String(sourceEvent.seriesId), club_id:eventClub.id, title:String(sourceEvent.title), status:sourceEvent.status === 'rejected' ? 'rejected' : 'approved', created_by:user.id});
+        var inserted = await client.from('events').insert({start_date:sourceEvent.start, end_date:sourceEvent.end, series_id:String(sourceEvent.seriesId), club_id:eventClub.id, title:String(sourceEvent.title), event_logo:safeLogo(sourceEvent.logo), status:sourceEvent.status === 'rejected' ? 'rejected' : 'approved', created_by:user.id});
         if (inserted.error) throw inserted.error;
       }
       var settingsResult = await client.from('app_settings').upsert({id:'main', header_logo:safeLogo(data.acuLogo)});
@@ -768,7 +817,7 @@
         var events = monthEntries(index, true, true);
         return '<section class="print-month"><h2>' + monthName(index) + '</h2>' + (events.length ? events.map(function (event) {
           var series = seriesFor(event);
-          return '<div class="print-line"><span class="when">' + esc(range(event)) + '</span>' + logoTag(series.logo, series.name) + '<span class="what"><strong>' + esc(event.title) + '</strong><br>' + esc(series.name) + ' · ' + esc(event.club) + '</span></div>';
+          return '<div class="print-line"><span class="when">' + esc(range(event)) + '</span>' + logoTag(eventLogoValue(event), event.title) + '<span class="what"><strong>' + esc(event.title) + '</strong><br>' + esc(series.name) + ' · ' + esc(event.club) + '</span></div>';
         }).join('') : '<div class="print-line">No dates entered</div>') + '</section>';
       }).join('') + '<p class="print-note">' + esc(NOTE) + '</p>';
   }
@@ -783,7 +832,7 @@
       var events = monthEntries(index, true, true);
       return '<section id="m' + index + '"><h2>' + monthName(index) + '</h2>' + (events.length ? events.map(function (event) {
         var series = seriesFor(event);
-        return '<article style="border-left-color:' + colour(series.colour) + '"><div class="date">' + esc(range(event)) + '</div><div class="detail">' + logoTag(series.logo, series.name) + '<div><strong>' + esc(event.title) + '</strong><small>' + esc(series.name) + ' · ' + esc(event.club) + '</small></div></div></article>';
+        return '<article style="border-left-color:' + colour(series.colour) + '"><div class="date">' + esc(range(event)) + '</div><div class="detail">' + logoTag(eventLogoValue(event), event.title) + '<div><strong>' + esc(event.title) + '</strong><small>' + esc(series.name) + ' · ' + esc(event.club) + '</small></div></div></article>';
       }).join('') : '<p class="none">No dates entered</p>') + '</section>';
     }).join('');
     var months = Array.from({length:12}, function (_, index) { return '<a href="#m' + index + '">' + monthName(index).slice(0, 3) + '</a>'; }).join('');

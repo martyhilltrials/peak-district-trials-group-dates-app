@@ -12,6 +12,9 @@ alter table public.profiles
   add column if not exists requested_club_name text not null default '';
 
 alter table public.events
+  add column if not exists event_logo text not null default '';
+
+alter table public.events
   alter column status set default 'approved';
 
 update public.events
@@ -158,7 +161,7 @@ grant execute on function public.pending_calendar_access_notification() to authe
 grant execute on function public.mark_calendar_access_notification_sent() to authenticated;
 
 revoke select on table public.events from anon, authenticated;
-grant select (id, start_date, end_date, series_id, club_id, title, status, created_at, updated_at)
+grant select (id, start_date, end_date, series_id, club_id, title, event_logo, status, created_at, updated_at)
   on table public.events to anon, authenticated;
 
 drop policy if exists events_member_insert on public.events;

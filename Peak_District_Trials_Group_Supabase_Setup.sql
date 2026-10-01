@@ -55,6 +55,7 @@ create table if not exists public.events (
   series_id text not null references public.series(id) on update cascade,
   club_id uuid not null references public.clubs(id) on delete restrict,
   title text not null,
+  event_logo text not null default '',
   status text not null default 'approved',
   created_by uuid references auth.users(id) on delete set null,
   updated_by uuid references auth.users(id) on delete set null,
@@ -74,6 +75,9 @@ alter table public.profiles
 
 alter table public.profiles
   add column if not exists requested_club_name text not null default '';
+
+alter table public.events
+  add column if not exists event_logo text not null default '';
 
 alter table public.events
   alter column status set default 'approved';
@@ -310,7 +314,7 @@ alter table public.events enable row level security;
 
 revoke all on table public.clubs, public.profiles, public.series, public.app_settings, public.events from anon, authenticated;
 grant select on table public.clubs, public.series, public.app_settings to anon, authenticated;
-grant select (id, start_date, end_date, series_id, club_id, title, status, created_at, updated_at)
+grant select (id, start_date, end_date, series_id, club_id, title, event_logo, status, created_at, updated_at)
   on table public.events to anon, authenticated;
 grant select, update on table public.profiles to authenticated;
 grant insert, update, delete on table public.clubs, public.series, public.app_settings, public.events to authenticated;

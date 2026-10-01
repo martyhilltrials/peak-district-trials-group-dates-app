@@ -58,7 +58,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
 .setup-row input[type=text]{width:100%;min-width:0}.setup-row input[type=color]{width:48px;padding:3px}
 .setup-row input[type=file]{width:125px;max-width:125px;font-size:11px;padding:6px 2px;border:0}.setup-row button{border:0;background:transparent;color:#a01e2a;font-size:21px}
 .file-actions{display:flex;flex-wrap:wrap;gap:8px}.clash-list{margin:0;padding-left:22px}.clash-list li{margin:9px 0}
-.event-status{display:inline-block;border-radius:999px;padding:2px 7px;margin-top:4px;background:#fff2df;color:#855014;font-size:11px;font-weight:800}.event-status.rejected{background:#fde9eb;color:#9b2633}
+.event-logo-field{border:1px solid var(--line);border-radius:9px;padding:12px;background:#f7f9fb}.event-logo-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}.event-logo-preview{width:74px;height:54px;object-fit:contain;background:white;border:1px solid var(--line);border-radius:7px;padding:4px}.event-status{display:inline-block;border-radius:999px;padding:2px 7px;margin-top:4px;background:#fff2df;color:#855014;font-size:11px;font-weight:800}.event-status.rejected{background:#fde9eb;color:#9b2633}
 .auth-box{border:1px solid var(--line);border-radius:10px;background:#f7f9fb;padding:14px}.auth-box strong,.auth-box small{display:block}.auth-box small{color:var(--muted);margin-top:4px}
 .subscription-url{display:grid;gap:6px;font-weight:650}.copy-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.copy-row input{width:100%;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
 .subscription-help{margin-top:16px;border-left:4px solid var(--acu-blue);background:#eeeeff;padding:12px 14px;border-radius:5px;color:#35356f}.subscription-help h3{margin:0 0 4px;font-size:15px}.subscription-help h3:not(:first-child){margin-top:13px}.subscription-help p{margin:0;color:#4d4d7a;font-size:13px}
@@ -95,7 +95,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
  <button id="newEvent" class="btn primary" type="button" hidden>+ Add date</button>
  <button id="openSetup" class="btn" type="button" hidden>Setup</button><span class="push"></span>
  <span id="connectionStatus" class="status-pill">Connecting…</span>
- <button id="authButton" class="btn" type="button">Club sign in</button>
+ <button id="authButton" class="btn" type="button">Admin sign in</button>
  <button id="pdfExport" class="btn" type="button">Export PDF</button>
  <button id="htmlExport" class="btn" type="button">Mobile HTML</button>
  <button id="calendarSubscribe" class="btn dark" type="button">Subscribe to Calendar</button>
@@ -122,6 +122,7 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
   <label class="wide">Series<select id="eventSeries" required></select></label>
   <label class="wide">Club<input id="eventClub" type="text" maxlength="120" required placeholder="Organising club"></label>
   <label class="wide">Event title<input id="eventTitle" type="text" maxlength="160" required placeholder="Name of the trial"></label>
+  <div class="wide event-logo-field"><strong>Club / event logo (optional)</strong><div class="event-logo-controls"><input id="eventLogo" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Upload club or event logo"><img id="eventLogoPreview" class="event-logo-preview" alt="Club or event logo preview" hidden><button id="removeEventLogo" class="btn danger" type="button" hidden>Remove logo</button></div><p class="hint" style="margin:7px 0 0">This logo is saved with this date and will be shown on the event listing and exports.</p></div>
  </div><div class="actions">
   <button id="deleteEvent" class="btn danger" type="button" hidden>Delete</button>
   <button id="cancelEvent" class="btn" type="button">Cancel</button>
@@ -136,15 +137,15 @@ dialog::backdrop{background:#0a2033aa}.modal{padding:22px}.modal h2{margin:0 0 6
  <button id="confirmClash" class="btn primary" type="button">Confirm and save</button></div>
 </div></dialog>
 <dialog id="authDialog"><div class="modal">
- <h2>Club/Centre representative access</h2>
+ <h2 id="authHeading">Club/Centre representative access</h2>
  <div id="signedOutPanel">
-  <p>Enter your name, club or centre, and email address. The app will send a secure sign-in link. New representatives must be approved by the administrator before they can add dates.</p>
-  <form id="authForm"><label class="full-field">Your name
+  <p id="authIntro">Enter your name, club or centre, and email address. The app will send a secure sign-in link. New representatives must be approved by the administrator before they can add dates.</p>
+  <form id="authForm"><div id="representativeFields"><label class="full-field">Your name
    <input id="authName" type="text" autocomplete="name" minlength="2" maxlength="100" required placeholder="Full name"></label>
    <p class="hint" style="margin-top:7px">Your name is shown only to the calendar administrator and will not appear on the public calendar.</p>
    <label class="full-field" style="margin-bottom:13px">Club / centre
    <input id="authClub" name="club_name" type="text" autocomplete="organization" maxlength="120" required placeholder="Your club or centre"></label>
-   <label class="full-field">Email address
+   </div><label class="full-field">Email address
    <input id="authEmail" type="email" autocomplete="email" required placeholder="name@example.com"></label>
    <p class="hint" style="margin-top:7px">To use another phone, tablet or computer, enter the same details on that device and open its new sign-in link. Your existing approval will carry across.</p>
    <div class="actions"><button id="cancelAuth" class="btn" type="button">Cancel</button><button class="btn primary" type="submit">Email sign-in link</button></div>
